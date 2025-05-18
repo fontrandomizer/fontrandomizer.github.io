@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Font Present Surprise</title>
+  <style>
+    :root {
+      --bg-color: #f5ecd7;
+      --btn-gradient: linear-gradient(90deg, #ffd7a9 0%, #f0b87a 100%);
+      --btn-color: #fff3e6;
+      --btn-shadow: 0 6px 20px 0 rgba(214,186,139,0.25);
+      --btn-text: #533016;
+      --gift-size: 120px;
+      --gift-spacing: 160px;
+      --font-name-size: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-color);
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    #gift-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: auto;
+    }
+    .gift-wrapper {
+      position: absolute;
+      width: var(--gift-size);
+      height: var(--gift-size);
+      top: calc(var(--gift-size) * -1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: visible;
+      transition: box-shadow 0.2s;
+    }
+    .gift-wrapper.opened {
+      box-shadow: 0 4px 32px 8px #fff3e660;
+      z-index: 2;
+    }
+    .font-name {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: var(--font-name-size);
+      opacity: 0;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 0;
+      font-weight: bold;
+      transition: opacity 0.2s;
+      letter-spacing: 0.01em;
+      color: #a0885c;
+      filter: drop-shadow(0 2px 2px #fff9e7b3);
+      user-select: all;
+    }
+    .gift-wrapper.opened .font-name {
+      opacity: 1;
+      animation: pop-in 0.5s cubic-bezier(.37,1.68,.42,.89) 0.05s;
+    }
+    @keyframes pop-in {
+      0% { opacity:0; transform:translate(-50%,-60%) scale(0.7);}
+      70% { opacity:1; transform:translate(-50%,-54%) scale(1.15);}
+      100% { opacity:1; transform:translate(-50%,-50%) scale(1);}
+    }
+    .gift {
+      font-size: var(--gift-size);
+      z-index: 1;
+      pointer-events: auto;
+      transition: filter 0.15s;
+      filter: drop-shadow(0 2px 8px #eac88655);
+      transition: transform 0.15s cubic-bezier(.65,2.11,.51,.96);
+    }
+    .gift-wrapper:active .gift {
+      transform: scale(1.06);
+      filter: brightness(1.08) drop-shadow(0 4px 24px #ffc87655);
+    }
+    @keyframes drop {
+      to { top: calc(50% - var(--gift-size) / 2 - 40px); }
+    }
+    @keyframes explode {
+      to { transform: scale(5); opacity: 0; }
+    }
+    .drop {
+      animation: drop 1s cubic-bezier(.37,1.6,.42,.85) forwards;
+    }
+    .explode {
+      animation: explode 0.55s cubic-bezier(.37,1.68,.42,.89) forwards;
+    }
+    .container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(120px);
+      text-align: center;
+      pointer-events: none;
+      z-index: 4;
+    }
+    #generate-btn {
+      background: var(--btn-gradient);
+      color: var(--btn-text);
+      border: none;
+      padding: 20px 48px;
+      border-radius: 18px;
+      font-size: 1.6rem;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: var(--btn-shadow);
+      transition: filter 0.18s, transform 0.15s cubic-bezier(.44,2.2,.61,.96);
+      pointer-events: auto;
+      letter-spacing: 0.01em;
+      outline: none;
+    }
+    #generate-btn:disabled {
+      background: #f7ead3;
+      color: #bda679;
+      cursor: not-allowed;
+      filter: grayscale(0.3) opacity(0.7);
+    }
+    #generate-btn:not(:disabled):hover,
+    #generate-btn:focus-visible {
+      filter: brightness(1.08) drop-shadow(0 4px 18px #f6e1c9c2);
+      transform: scale(1.035);
+    }
+    #preview {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.6s;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .preview-name {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .preview-sample {
+      font-size: 19px;
+      font-weight: 400;
+      letter-spacing: 0.012em;
+    }
+    @media (max-width:600px) {
+      .container { transform: translate(-50%, -50%) translateY(90px);}
+      .gift-wrapper, .gift { --gift-size: 72px; font-size: 72px;}
+      .gift-wrapper { width: 72px; height: 72px;}
+      .font-name { font-size: 13px;}
+    }
+    #header-title {
+      width: 100vw;
+      text-align: center;
+      font-size: 2.1rem;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      color: #533016;
+      padding: 38px 0 16px 0;
+      z-index: 10;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      box-sizing: border-box;
+      background: none;
+      position: relative;
+      user-select: none;
+    }
+    @media (max-width:600px) {
+      #header-title {
+    font-size: 1.15rem;
+    padding: 25px 0 9px 0;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div id="header-title">Michael's Google Font Randomizer</div>
+  <div id="gift-container"></div>
+  <div class="container">
+    <button id="generate-btn" disabled>Loading Fonts...</button>
+  </div>
+  <div id="preview"></div>
+  <script>
+let fontsList = [];
+
+const generateBtn = document.getElementById('generate-btn');
+const giftContainer = document.getElementById('gift-container');
+const previewEl = document.getElementById('preview');
+const giftSize = 120;
+const fontMargin = 30; // minimum space between font labels
+
+// Fetch all Google Fonts
+async function fetchFonts() {
+  try {
+    const apiKey = 'AIzaSyCV2P29xTvxfqBKUzx5YtmASfSIS9bfB-w';
+    const res = await fetch(`https://www.googleapis.com/webfonts/v1/webfonts?key=${apiKey}&sort=alpha`);
+    const data = await res.json();
+    fontsList = data.items.map(item => item.family);
+  } catch {
+    fontsList = ['Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Oswald'];
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generate Fonts';
+  }
+}
+
+// Picks 'count' unique random fonts
+function pickFonts(count = 3) {
+  const available = [...fontsList];
+  const picks = [];
+  for (let i = 0; i < count && available.length; i++) {
+    const idx = Math.floor(Math.random() * available.length);
+    picks.push(available.splice(idx, 1)[0]);
+  }
+  return picks;
+}
+
+// Loads a font stylesheet
+function loadFont(name) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}&display=swap`;
+  document.head.appendChild(link);
+}
+
+// Show preview at bottom
+function showPreview(font) {
+  loadFont(font);
+  previewEl.style.fontFamily = font;
+  previewEl.innerHTML = `<div class="preview-name">${font}</div><div class="preview-sample">The quick brown fox jumps over the lazy dog</div>`;
+  previewEl.style.opacity = '1';
+  previewEl.classList.remove('fadeout');
+}
+
+// Fade out previously revealed font names and the preview box
+function fadeOutOldElements() {
+  const wrappers = Array.from(document.querySelectorAll('.gift-wrapper'));
+  wrappers.forEach(wrapper => {
+    const label = wrapper.querySelector('.font-name');
+    if (label && wrapper.classList.contains('opened')) {
+      label.style.transition = 'opacity 0.5s';
+      label.style.opacity = '0';
+    }
+    wrapper.style.transition = 'opacity 0.6s';
+    wrapper.style.opacity = '0';
+    setTimeout(() => {
+      if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+    }, 600);
+  });
+  previewEl.style.transition = 'opacity 0.7s';
+  previewEl.style.opacity = '0';
+}
+
+// Dynamically calculates horizontal spacing to avoid overlap
+function getFontLabelWidths(fonts) {
+  // create temp span for each font label, apply styling, append to body to measure width
+  const tempSpans = [];
+  let totalWidth = 0;
+  const widths = [];
+  fonts.forEach(font => {
+    loadFont(font); // ensure font loaded
+    const span = document.createElement('span');
+    span.className = 'font-name';
+    span.style.opacity = '1';
+    span.style.position = 'absolute';
+    span.style.visibility = 'hidden';
+    span.style.whiteSpace = 'nowrap';
+    span.style.fontFamily = font;
+    span.style.fontSize = '22px';
+    span.textContent = font;
+    document.body.appendChild(span);
+    const w = span.getBoundingClientRect().width;
+    widths.push(w);
+    totalWidth += w;
+    tempSpans.push(span);
+  });
+  // remove temp spans
+  tempSpans.forEach(span => document.body.removeChild(span));
+  return {widths, totalWidth};
+}
+
+// Render presents, spaced out by the measured font label widths
+function renderPresents(fonts) {
+  const {widths} = getFontLabelWidths(fonts);
+  const num = fonts.length;
+  const centerX = window.innerWidth / 2;
+
+  // Calculate spacing: find max offset needed for left/right to prevent overlap
+  // Place middle present at center, and calculate offsets for left/right
+  let offsets = [0, 0, 0];
+  if (num === 3) {
+    // Distance from center to left: half center label + half left label + present + margin
+    const leftDist = 0.5 * widths[1] + 0.5 * widths[0] + giftSize + fontMargin;
+    // Distance from center to right: half center label + half right label + present + margin
+    const rightDist = 0.5 * widths[1] + 0.5 * widths[2] + giftSize + fontMargin;
+    // Use the max so they're symmetrical
+    const maxDist = Math.max(leftDist, rightDist);
+    offsets = [
+      centerX - maxDist,         // left present
+      centerX,                   // center present
+      centerX + maxDist          // right present
+    ];
+  } else if (num === 2) {
+    // For 2 presents, just split around center
+    const half = (widths[0] + widths[1] + 2 * giftSize + fontMargin) / 2;
+    offsets = [
+      centerX - half / 2,
+      centerX + half / 2
+    ];
+  } else if (num === 1) {
+    offsets = [centerX];
+  }
+
+  fonts.forEach((font, i) => {
+    loadFont(font);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'gift-wrapper drop';
+    wrapper.style.top = '';
+    wrapper.style.left = `${offsets[i] - giftSize / 2}px`;
+
+    const label = document.createElement('span');
+    label.className = 'font-name';
+    label.textContent = font;
+    label.style.fontFamily = font;
+    label.style.opacity = '0';
+    wrapper.appendChild(label);
+
+    const gift = document.createElement('div');
+    gift.className = 'gift';
+    gift.textContent = '🎁';
+    wrapper.appendChild(gift);
+
+    gift.addEventListener('click', () => {
+      wrapper.classList.add('opened');
+      label.style.transition = 'opacity 0.2s';
+      label.style.opacity = '1';
+      showPreview(font);
+      gift.classList.add('explode');
+      setTimeout(() => {
+        gift.style.display = 'none';
+      }, 650);
+    });
+
+    giftContainer.appendChild(wrapper);
+  });
+}
+
+// Removes all presents from the screen
+function clearGifts() {
+  giftContainer.innerHTML = '';
+}
+
+// On "Generate Fonts"
+generateBtn.addEventListener('click', () => {
+  fadeOutOldElements();
+  setTimeout(() => {
+    clearGifts();
+    previewEl.innerHTML = '';
+    previewEl.style.opacity = '0';
+
+    const fonts = pickFonts(3);
+    renderPresents(fonts);
+  }, 620);
+});
+
+// Load the font list on first page load
+fetchFonts();
+
+window.addEventListener('resize', () => {
+  // Re-render gifts on resize if any are open to maintain centering and spacing
+  const wrappers = Array.from(document.querySelectorAll('.gift-wrapper'));
+  if (!wrappers.length) return;
+  // Collect open fonts, re-render
+  const fonts = wrappers.map(wrapper => {
+    const label = wrapper.querySelector('.font-name');
+    return label ? label.textContent : '';
+  }).filter(Boolean);
+  clearGifts();
+  renderPresents(fonts);
+});
+</script>
+</body>
+</html>
