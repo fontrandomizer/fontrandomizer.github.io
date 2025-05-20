@@ -353,21 +353,31 @@ function renderPresents(fonts) {
   clearGifts(); // Always clear before rendering
   const { widths } = getFontLabelWidths(fonts);
 
-  // Triangle layout on small portrait screens
-  const isPortraitMobile = window.innerWidth < 700 && window.innerHeight > window.innerWidth;
+  // Pyramid layout on small portrait screens
+  const isMobilePortrait =
+    window.innerWidth < 700 && window.innerHeight > window.innerWidth && fonts.length === 3;
 
-  if (isPortraitMobile && fonts.length === 3) {
-    // Dynamically size and position the triangle
-    const containerWidth = window.innerWidth;
-    const container = giftContainer;
-    container.style.position = "relative";
-    const spacing = Math.max(24, (containerWidth - 3 * 80) / 4);
+  if (isMobilePortrait) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const size = giftSize;
+    // Dynamic horizontal gap (no less than 16px)
+    const gap = Math.max(16, (w - 2 * size) / 3);
 
-    // Coordinates for triangle (visually tuned)
-    const triangle = [
-      { left: "50%", top: "10px", transform: "translate(-50%, 0)" },        // Top middle
-      { left: `calc(25% + ${spacing}px)`, top: "120px", transform: "translate(-50%, 0)" }, // Bottom left
-      { left: `calc(75% - ${spacing}px)`, top: "120px", transform: "translate(-50%, 0)" }, // Bottom right
+    // Vertical positions: top present centered vertically, bottom row just below
+    const topY = Math.max(90, h / 2 - size * 1.2); // keep away from title, tune as needed
+    const bottomY = topY + size * 1.12;            // a bit below the top, tweak as needed
+
+    // Horizontal positions for pyramid
+    const leftBottom1 = gap;
+    const leftBottom2 = w - gap - size;
+    const leftTop = w / 2 - size / 2;
+
+    // [top, bottom left, bottom right]
+    const coords = [
+      { left: `${leftTop}px`, top: `${topY}px` },          // top center
+      { left: `${leftBottom1}px`, top: `${bottomY}px` },   // bottom left
+      { left: `${leftBottom2}px`, top: `${bottomY}px` },   // bottom right
     ];
 
     fonts.forEach((font, i) => {
@@ -375,11 +385,9 @@ function renderPresents(fonts) {
       const wrapper = document.createElement('div');
       wrapper.className = 'gift-wrapper drop';
       wrapper.style.position = 'absolute';
-      wrapper.style.left = triangle[i].left;
-      wrapper.style.top = triangle[i].top;
-      wrapper.style.transform = triangle[i].transform;
-      wrapper.style.margin = "0";
-      wrapper.style.opacity = "1";
+      wrapper.style.left = coords[i].left;
+      wrapper.style.top = coords[i].top;
+      wrapper.style.margin = '0';
 
       const label = document.createElement('span');
       label.className = 'font-name';
@@ -394,23 +402,24 @@ function renderPresents(fonts) {
       wrapper.appendChild(gift);
 
       gift.addEventListener('click', () => {
-        wrapper.classList.add('opened');
-        label.style.transition = 'opacity 0.2s';
-        label.style.opacity = '1';
-        showPreview(font);
-        gift.classList.add('explode');
-        setTimeout(() => {
-          gift.style.display = 'none';
-        }, 650);
+        if (!wrapper.classList.contains('opened')) {
+          wrapper.classList.add('opened');
+          label.style.transition = 'opacity 0.2s';
+          label.style.opacity = '1';
+          showPreview(font);
+          gift.classList.add('explode');
+          setTimeout(() => {
+            gift.style.display = 'none';
+          }, 650);
+        }
       });
 
       giftContainer.appendChild(wrapper);
     });
-    return; // Done for triangle mobile
+    return; // Done for mobile pyramid
   }
 
-  // --- Desktop/landscape/more presents fallback: previous layout ---
-  // Your dynamic spacing logic with margins for no overlap:
+  // --- Desktop/landscape/other fallback: your existing layout ---
   const num = fonts.length;
   const centerX = window.innerWidth / 2;
   let offsets = [];
