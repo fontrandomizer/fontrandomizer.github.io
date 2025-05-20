@@ -13,9 +13,9 @@
       --btn-color: #fff3e6;
       --btn-shadow: 0 6px 20px 0 rgba(214,186,139,0.25);
       --btn-text: #533016;
-      --gift-size: 120px;
+      --gift-size: clamp(72px, 14vw, 120px);
       --gift-spacing: 160px;
-      --font-name-size: 22px;
+      --font-name-size: clamp(12px, 2.8vw, 22px);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -25,6 +25,7 @@
       margin: 0;
       position: relative;
       overflow: hidden;
+      overflow-x: hidden;
     }
     #gift-container {
       position: absolute;
@@ -110,6 +111,12 @@
       pointer-events: none;
       z-index: 4;
     }
+
+    @media (max-height: 500px) {
+      .container {
+        transform: translate(-50%, -50%) translateY(40px);
+      }
+    }
     #generate-btn {
       background: var(--btn-gradient);
       color: var(--btn-text);
@@ -152,16 +159,33 @@
       font-size: 28px;
       margin-bottom: 8px;
     }
+
     .preview-sample {
       font-size: 19px;
       font-weight: 400;
       letter-spacing: 0.012em;
     }
-    @media (max-width:600px) {
-      .container { transform: translate(-50%, -50%) translateY(90px);}
-      .gift-wrapper, .gift { --gift-size: 72px; font-size: 72px;}
-      .gift-wrapper { width: 72px; height: 72px;}
-      .font-name { font-size: 13px;}
+
+    @media (max-width: 600px) {
+      .container {
+        transform: translate(-50%, -50%) translateY(90px);
+      }
+      .gift-wrapper, .gift {
+        font-size: var(--gift-size);
+      }
+      .gift-wrapper {
+        width: 72px;
+        height: 72px;
+      }
+      .font-name {
+        font-size: 13px;
+      }
+      .preview-name {
+        font-size: 18px;
+      }
+      .preview-sample {
+        font-size: 14px;
+      }
     }
     #header-title {
       width: 100vw;
@@ -196,6 +220,7 @@
   <div id="preview"></div>
   <script>
 let fontsList = [];
+let fontQueue = [];
 
 const generateBtn = document.getElementById('generate-btn');
 const giftContainer = document.getElementById('gift-container');
@@ -220,13 +245,19 @@ async function fetchFonts() {
 
 // Picks 'count' unique random fonts
 function pickFonts(count = 3) {
-  const available = [...fontsList];
-  const picks = [];
-  for (let i = 0; i < count && available.length; i++) {
-    const idx = Math.floor(Math.random() * available.length);
-    picks.push(available.splice(idx, 1)[0]);
+  if (fontQueue.length < count) {
+    fontQueue = shuffleArray([...fontsList]);
   }
-  return picks;
+
+  return fontQueue.splice(0, count);
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }
 
 // Loads a font stylesheet
@@ -293,29 +324,29 @@ function getFontLabelWidths(fonts) {
   return {widths, totalWidth};
 }
 
-// Render presents, spaced out by the measured font label widths
 function renderPresents(fonts) {
-  const {widths} = getFontLabelWidths(fonts);
+  const { widths } = getFontLabelWidths(fonts);
   const num = fonts.length;
   const centerX = window.innerWidth / 2;
+  let offsets = [];
 
-  // Calculate spacing: find max offset needed for left/right to prevent overlap
-  // Place middle present at center, and calculate offsets for left/right
-  let offsets = [0, 0, 0];
-  if (num === 3) {
-    // Distance from center to left: half center label + half left label + present + margin
+  // Determine if total width would overflow screen
+  const totalContentWidth = widths.reduce((a, b) => a + b, 0) + num * giftSize + (num - 1) * fontMargin;
+  const maxContentWidth = window.innerWidth - 40; // Leave margin
+
+  if (totalContentWidth > maxContentWidth) {
+    // Too tight, just center all gifts vertically stacked or same X
+    offsets = Array(num).fill(centerX);
+  } else if (num === 3) {
     const leftDist = 0.5 * widths[1] + 0.5 * widths[0] + giftSize + fontMargin;
-    // Distance from center to right: half center label + half right label + present + margin
     const rightDist = 0.5 * widths[1] + 0.5 * widths[2] + giftSize + fontMargin;
-    // Use the max so they're symmetrical
     const maxDist = Math.max(leftDist, rightDist);
     offsets = [
-      centerX - maxDist,         // left present
-      centerX,                   // center present
-      centerX + maxDist          // right present
+      centerX - maxDist,
+      centerX,
+      centerX + maxDist
     ];
   } else if (num === 2) {
-    // For 2 presents, just split around center
     const half = (widths[0] + widths[1] + 2 * giftSize + fontMargin) / 2;
     offsets = [
       centerX - half / 2,
