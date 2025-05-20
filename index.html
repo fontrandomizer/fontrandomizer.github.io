@@ -36,6 +36,28 @@
       overflow: visible;
       pointer-events: auto;
     }
+    #gift-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 44vh; /* Adjust for mobile, gives room for button/preview */
+      position: absolute;
+      top: 19vh; /* pushes down below header */
+      left: 0;
+      pointer-events: auto;
+      gap: min(4vw, 32px);
+    }
+
+    @media (max-width: 700px) and (orientation: portrait) {
+    #gift-container {
+      flex-direction: column;
+      height: 44vh;
+      gap: min(5vw, 20px);
+      top: 20vh;
+    }
+  }
     .gift-wrapper {
       position: absolute;
       width: var(--gift-size);
@@ -360,8 +382,11 @@ function renderPresents(fonts) {
     loadFont(font);
     const wrapper = document.createElement('div');
     wrapper.className = 'gift-wrapper drop';
+    wrapper.style.position = 'relative';
+    wrapper.style.left = '';
     wrapper.style.top = '';
-    wrapper.style.left = `${offsets[i] - giftSize / 2}px`;
+    wrapper.style.margin = '0';
+    wrapper.style.opacity = '1';
 
     const label = document.createElement('span');
     label.className = 'font-name';
@@ -376,15 +401,17 @@ function renderPresents(fonts) {
     wrapper.appendChild(gift);
 
     gift.addEventListener('click', () => {
+      if (wrapper.classList.contains('opened')) return;
       wrapper.classList.add('opened');
       label.style.transition = 'opacity 0.2s';
       label.style.opacity = '1';
       showPreview(font);
       gift.classList.add('explode');
       setTimeout(() => {
-        gift.style.display = 'none';
-      }, 650);
-    });
+    // Remove the entire wrapper (present) after animation
+    wrapper.remove();
+    }, 700);
+});
 
     giftContainer.appendChild(wrapper);
   });
