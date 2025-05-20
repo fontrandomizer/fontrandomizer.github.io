@@ -15,7 +15,10 @@
       --btn-text: #533016;
       --gift-size: clamp(72px, 14vw, 120px);
       --gift-spacing: 160px;
-      --font-name-size: clamp(12px, 2.8vw, 22px);
+      --font-name-min: 12px;
+      --font-name-max: 24px;
+      /* how big relative to the gift: 0.18 = 18% of gift-size */
+      --font-name-scale: 0.18;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -321,79 +324,89 @@ function fadeOutOldElements() {
   previewEl.style.opacity = '0';
 }
 
-// Dynamically calculates horizontal spacing to avoid overlap
+// ————————————————
+// Measure each font name’s rendered width so we can space gifts
+// ————————————————
 function getFontLabelWidths(fonts) {
-  // create temp span for each font label, apply styling, append to body to measure width
   const tempSpans = [];
   let totalWidth = 0;
   const widths = [];
+
   fonts.forEach(font => {
-    loadFont(font); // ensure font loaded
+    // make sure the font is loaded
+    loadFont(font);
+
+    // create an off-screen span to measure
     const span = document.createElement('span');
-    span.className = 'font-name';
+    span.className     = 'font-name';
     span.style.opacity = '1';
-    span.style.position = 'absolute';
+    span.style.position= 'absolute';
     span.style.visibility = 'hidden';
     span.style.whiteSpace = 'nowrap';
-    span.style.fontFamily = font;
-    span.style.fontSize = '22px';
-    span.textContent = font;
+    span.style.fontFamily  = font;
+    span.style.fontSize    = '22px';  // use a consistent size for measurement
+    span.textContent      = font;
     document.body.appendChild(span);
+
     const w = span.getBoundingClientRect().width;
     widths.push(w);
     totalWidth += w;
     tempSpans.push(span);
   });
-  // remove temp spans
+
+  // clean up
   tempSpans.forEach(span => document.body.removeChild(span));
-  return {widths, totalWidth};
+
+  return { widths, totalWidth };
 }
 
 function renderPresents(fonts) {
-  clearGifts(); // Always clear before rendering
+  // 1) Clear old presents & reset container style
+  clearGifts();
+  giftContainer.removeAttribute('style');
+
+  // 2) Prep for both branches
   const { widths } = getFontLabelWidths(fonts);
-
-  // Pyramid layout on small portrait screens
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const size = giftSize;         // in px
   const isMobilePortrait =
-    window.innerWidth < 700 && window.innerHeight > window.innerWidth && fonts.length === 3;
+    w < 700 && h > w && fonts.length === 3;
 
+  // ─── MOBILE-PORTRAIT PYRAMID + DROP ANIM ───
   if (isMobilePortrait) {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    const size = giftSize;
-    // Dynamic horizontal gap (no less than 16px)
-    const gap = Math.max(16, (w - 2 * size) / 3);
+    // grab header & button for vertical slot
+    const headerRect = document.getElementById('header-title').getBoundingClientRect();
+    const btnRect    = generateBtn.getBoundingClientRect();
+    const MARGIN     = 16;
 
-    // Vertical positions: top present centered vertically, bottom row just below
-    const topY = Math.max(90, h / 2 - size * 1.2); // keep away from title, tune as needed
-    const bottomY = topY + size * 1.12;            // a bit below the top, tweak as needed
+    const topLimit    = headerRect.bottom + MARGIN;
+    const bottomLimit = btnRect.top    - MARGIN;
+    const regionH     = bottomLimit - topLimit;
 
-    // Horizontal positions for pyramid
-    const leftBottom1 = gap;
-    const leftBottom2 = w - gap - size;
-    const leftTop = w / 2 - size / 2;
+    // how far down from slot-top for center gift
+    const centerRelY = regionH / 2;
+    // bottom gifts sit a bit lower
+    const bottomRelY = centerRelY + giftSize * 0.6;
 
-    // [top, bottom left, bottom right]
-    const coords = [
-      { left: `${leftTop}px`, top: `${topY}px` },          // top center
-      { left: `${leftBottom1}px`, top: `${bottomY}px` },   // bottom left
-      { left: `${leftBottom2}px`, top: `${bottomY}px` },   // bottom right
-    ];
+    const xPercents = ['50%', '25%', '75%']; // middle, left, right
 
     fonts.forEach((font, i) => {
       loadFont(font);
       const wrapper = document.createElement('div');
-      wrapper.className = 'gift-wrapper drop';
-      wrapper.style.position = 'absolute';
-      wrapper.style.left = coords[i].left;
-      wrapper.style.top = coords[i].top;
-      wrapper.style.margin = '0';
+      wrapper.className = 'gift-wrapper'; // no 'drop' here
+      wrapper.style.position = 'fixed';
+      wrapper.style.left     = xPercents[i];
+      wrapper.style.top      = `${topLimit}px`;
+      wrapper.style.transform = 'translateX(-50%) translateY(-200px)'; // start above
+      wrapper.style.transition     = 'transform 0.8s cubic-bezier(.37,1.6,.42,.85)';
+      wrapper.style.transitionDelay= `${i * 0.1}s`;
 
+      // label + gift identical to before
       const label = document.createElement('span');
       label.className = 'font-name';
       label.textContent = font;
       label.style.fontFamily = font;
-      label.style.opacity = '0';
       wrapper.appendChild(label);
 
       const gift = document.createElement('div');
@@ -404,46 +417,44 @@ function renderPresents(fonts) {
       gift.addEventListener('click', () => {
         if (!wrapper.classList.contains('opened')) {
           wrapper.classList.add('opened');
-          label.style.transition = 'opacity 0.2s';
           label.style.opacity = '1';
           showPreview(font);
           gift.classList.add('explode');
-          setTimeout(() => {
-            gift.style.display = 'none';
-          }, 650);
+          setTimeout(() => gift.style.display = 'none', 650);
         }
       });
 
       giftContainer.appendChild(wrapper);
+
+      // trigger the drop
+      requestAnimationFrame(() => {
+        const y = i === 0 ? centerRelY : bottomRelY;
+        wrapper.style.transform = `translateX(-50%) translateY(${y}px)`;
+      });
     });
-    return; // Done for mobile pyramid
+
+    return; // pyramid done
   }
+  // ────────────────────────────────────────────
 
-  // --- Desktop/landscape/other fallback: your existing layout ---
-  const num = fonts.length;
-  const centerX = window.innerWidth / 2;
-  let offsets = [];
-  const totalContentWidth = widths.reduce((a, b) => a + b, 0) + num * giftSize + (num - 1) * fontMargin;
-  const maxContentWidth = window.innerWidth - 40;
+  // 4) DESKTOP / LANDSCAPE / ANY OTHER CASE: original logic
+  const num     = fonts.length;
+  const centerX = w / 2;
+  let offsets   = [];
+  const totalW  = widths.reduce((a,b) => a+b, 0) + num*size + (num-1)*fontMargin;
+  const maxW    = w - 40;
 
-  if (totalContentWidth > maxContentWidth) {
+  if (totalW > maxW) {
     offsets = Array(num).fill(centerX);
   } else if (num === 3) {
-    const leftDist = 0.5 * widths[1] + 0.5 * widths[0] + giftSize + fontMargin;
-    const rightDist = 0.5 * widths[1] + 0.5 * widths[2] + giftSize + fontMargin;
-    const maxDist = Math.max(leftDist, rightDist);
-    offsets = [
-      centerX - maxDist,
-      centerX,
-      centerX + maxDist
-    ];
+    const leftDist  = 0.5*widths[1] + 0.5*widths[0] + size + fontMargin;
+    const rightDist = 0.5*widths[1] + 0.5*widths[2] + size + fontMargin;
+    const maxDist   = Math.max(leftDist, rightDist);
+    offsets = [centerX - maxDist, centerX, centerX + maxDist];
   } else if (num === 2) {
-    const half = (widths[0] + widths[1] + 2 * giftSize + fontMargin) / 2;
-    offsets = [
-      centerX - half / 2,
-      centerX + half / 2
-    ];
-  } else if (num === 1) {
+    const half = (widths[0]+widths[1] + 2*size + fontMargin)/2;
+    offsets = [centerX - half/2, centerX + half/2];
+  } else {
     offsets = [centerX];
   }
 
@@ -452,38 +463,35 @@ function renderPresents(fonts) {
     const wrapper = document.createElement('div');
     wrapper.className = 'gift-wrapper drop';
     wrapper.style.position = 'absolute';
-    wrapper.style.left = `${offsets[i] - giftSize / 2}px`;
-    wrapper.style.top = "0";
-    wrapper.style.margin = "0";
-    wrapper.style.opacity = "1";
+    wrapper.style.left     = `${offsets[i] - size/2}px`;
+    wrapper.style.top      = '0';
+    wrapper.style.margin   = '0';
+    wrapper.style.opacity  = '1';
 
     const label = document.createElement('span');
-    label.className = 'font-name';
+    label.className   = 'font-name';
     label.textContent = font;
     label.style.fontFamily = font;
-    label.style.opacity = '0';
+    label.style.opacity    = '0';
     wrapper.appendChild(label);
 
     const gift = document.createElement('div');
-    gift.className = 'gift';
+    gift.className    = 'gift';
     gift.textContent = '🎁';
     wrapper.appendChild(gift);
 
     gift.addEventListener('click', () => {
       wrapper.classList.add('opened');
       label.style.transition = 'opacity 0.2s';
-      label.style.opacity = '1';
+      label.style.opacity    = '1';
       showPreview(font);
       gift.classList.add('explode');
-      setTimeout(() => {
-        gift.style.display = 'none';
-      }, 650);
+      setTimeout(() => gift.style.display = 'none', 650);
     });
 
     giftContainer.appendChild(wrapper);
   });
 }
-
 
 // Removes all presents from the screen
 function clearGifts() {
