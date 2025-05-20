@@ -51,13 +51,16 @@
     }
 
     @media (max-width: 700px) and (orientation: portrait) {
-    #gift-container {
-      flex-direction: column;
-      height: 44vh;
-      gap: min(5vw, 20px);
-      top: 20vh;
+      #gift-container {
+        display: block; /* Disable flex for custom JS placement */
+        height: auto;
+        top: 120px; /* Leaves room for header/title */
+        width: 100vw;
+        min-height: 300px;
+        padding-bottom: 120px; /* Leaves room for generate btn */
+      }
     }
-  }
+
     .gift-wrapper {
       position: absolute;
       width: var(--gift-size);
@@ -347,17 +350,74 @@ function getFontLabelWidths(fonts) {
 }
 
 function renderPresents(fonts) {
+  clearGifts(); // Always clear before rendering
   const { widths } = getFontLabelWidths(fonts);
+
+  // Triangle layout on small portrait screens
+  const isPortraitMobile = window.innerWidth < 700 && window.innerHeight > window.innerWidth;
+
+  if (isPortraitMobile && fonts.length === 3) {
+    // Dynamically size and position the triangle
+    const containerWidth = window.innerWidth;
+    const container = giftContainer;
+    container.style.position = "relative";
+    const spacing = Math.max(24, (containerWidth - 3 * 80) / 4);
+
+    // Coordinates for triangle (visually tuned)
+    const triangle = [
+      { left: "50%", top: "10px", transform: "translate(-50%, 0)" },        // Top middle
+      { left: `calc(25% + ${spacing}px)`, top: "120px", transform: "translate(-50%, 0)" }, // Bottom left
+      { left: `calc(75% - ${spacing}px)`, top: "120px", transform: "translate(-50%, 0)" }, // Bottom right
+    ];
+
+    fonts.forEach((font, i) => {
+      loadFont(font);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'gift-wrapper drop';
+      wrapper.style.position = 'absolute';
+      wrapper.style.left = triangle[i].left;
+      wrapper.style.top = triangle[i].top;
+      wrapper.style.transform = triangle[i].transform;
+      wrapper.style.margin = "0";
+      wrapper.style.opacity = "1";
+
+      const label = document.createElement('span');
+      label.className = 'font-name';
+      label.textContent = font;
+      label.style.fontFamily = font;
+      label.style.opacity = '0';
+      wrapper.appendChild(label);
+
+      const gift = document.createElement('div');
+      gift.className = 'gift';
+      gift.textContent = '🎁';
+      wrapper.appendChild(gift);
+
+      gift.addEventListener('click', () => {
+        wrapper.classList.add('opened');
+        label.style.transition = 'opacity 0.2s';
+        label.style.opacity = '1';
+        showPreview(font);
+        gift.classList.add('explode');
+        setTimeout(() => {
+          gift.style.display = 'none';
+        }, 650);
+      });
+
+      giftContainer.appendChild(wrapper);
+    });
+    return; // Done for triangle mobile
+  }
+
+  // --- Desktop/landscape/more presents fallback: previous layout ---
+  // Your dynamic spacing logic with margins for no overlap:
   const num = fonts.length;
   const centerX = window.innerWidth / 2;
   let offsets = [];
-
-  // Determine if total width would overflow screen
   const totalContentWidth = widths.reduce((a, b) => a + b, 0) + num * giftSize + (num - 1) * fontMargin;
-  const maxContentWidth = window.innerWidth - 40; // Leave margin
+  const maxContentWidth = window.innerWidth - 40;
 
   if (totalContentWidth > maxContentWidth) {
-    // Too tight, just center all gifts vertically stacked or same X
     offsets = Array(num).fill(centerX);
   } else if (num === 3) {
     const leftDist = 0.5 * widths[1] + 0.5 * widths[0] + giftSize + fontMargin;
@@ -382,11 +442,11 @@ function renderPresents(fonts) {
     loadFont(font);
     const wrapper = document.createElement('div');
     wrapper.className = 'gift-wrapper drop';
-    wrapper.style.position = 'relative';
-    wrapper.style.left = '';
-    wrapper.style.top = '';
-    wrapper.style.margin = '0';
-    wrapper.style.opacity = '1';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = `${offsets[i] - giftSize / 2}px`;
+    wrapper.style.top = "0";
+    wrapper.style.margin = "0";
+    wrapper.style.opacity = "1";
 
     const label = document.createElement('span');
     label.className = 'font-name';
@@ -401,21 +461,20 @@ function renderPresents(fonts) {
     wrapper.appendChild(gift);
 
     gift.addEventListener('click', () => {
-      if (wrapper.classList.contains('opened')) return;
       wrapper.classList.add('opened');
       label.style.transition = 'opacity 0.2s';
       label.style.opacity = '1';
       showPreview(font);
       gift.classList.add('explode');
       setTimeout(() => {
-    // Remove the entire wrapper (present) after animation
-    wrapper.remove();
-    }, 700);
-});
+        gift.style.display = 'none';
+      }, 650);
+    });
 
     giftContainer.appendChild(wrapper);
   });
 }
+
 
 // Removes all presents from the screen
 function clearGifts() {
