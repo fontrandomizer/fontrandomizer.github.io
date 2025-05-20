@@ -376,9 +376,11 @@ function renderPresents(fonts) {
   // ─── MOBILE-PORTRAIT PYRAMID + DROP ANIM ───
   if (isMobilePortrait) {
     // grab header & button for vertical slot
-    const headerRect = document.getElementById('header-title').getBoundingClientRect();
-    const btnRect    = generateBtn.getBoundingClientRect();
-    const MARGIN     = 16;
+    const headerRect = document
+      .getElementById('header-title')
+      .getBoundingClientRect();
+    const btnRect = generateBtn.getBoundingClientRect();
+    const MARGIN = 16;
 
     const topLimit    = headerRect.bottom + MARGIN;
     const bottomLimit = btnRect.top    - MARGIN;
@@ -393,24 +395,27 @@ function renderPresents(fonts) {
 
     fonts.forEach((font, i) => {
       loadFont(font);
+
+      // create the wrapper
       const wrapper = document.createElement('div');
-      wrapper.className = 'gift-wrapper'; // no 'drop' here
-      wrapper.style.position = 'fixed';
-      wrapper.style.left     = xPercents[i];
-      wrapper.style.top      = `${topLimit}px`;
-      wrapper.style.transform = 'translateX(-50%) translateY(-200px)'; // start above
+      wrapper.className = 'gift-wrapper';       // no 'drop' class
+      wrapper.style.position       = 'fixed';
+      wrapper.style.left           = xPercents[i];
+      wrapper.style.top            = `${topLimit}px`;
+      wrapper.style.transform      = 'translateX(-50%) translateY(-200px)';
       wrapper.style.transition     = 'transform 0.8s cubic-bezier(.37,1.6,.42,.85)';
       wrapper.style.transitionDelay= `${i * 0.1}s`;
 
-      // label + gift identical to before
+      // label
       const label = document.createElement('span');
-      label.className = 'font-name';
-      label.textContent = font;
+      label.className      = 'font-name';
+      label.textContent    = font;
       label.style.fontFamily = font;
       wrapper.appendChild(label);
 
+      // gift emoji
       const gift = document.createElement('div');
-      gift.className = 'gift';
+      gift.className    = 'gift';
       gift.textContent = '🎁';
       wrapper.appendChild(gift);
 
@@ -426,15 +431,18 @@ function renderPresents(fonts) {
 
       giftContainer.appendChild(wrapper);
 
-      // trigger the drop
+      // ── double-frame to force the browser to paint initial state ──
       requestAnimationFrame(() => {
-        const y = i === 0 ? centerRelY : bottomRelY;
-        wrapper.style.transform = `translateX(-50%) translateY(${y}px)`;
+        requestAnimationFrame(() => {
+          const y = i === 0 ? centerRelY : bottomRelY;
+          wrapper.style.transform = `translateX(-50%) translateY(${y}px)`;
+        });
       });
-    });
+    }); // end forEach
 
     return; // pyramid done
   }
+  // ────────────────────────────────────────────────────────────────
   // ────────────────────────────────────────────
 
   // 4) DESKTOP / LANDSCAPE / ANY OTHER CASE: original logic
